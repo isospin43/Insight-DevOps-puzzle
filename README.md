@@ -20,7 +20,7 @@ class Results(Table):
     description = Col('description')
     date_added =('Date added')
 
-In app.py  header I added #from tables import Results I  added the following below @app.route("/success")
+In app.py  header I added #from tables import Results. Following this I added the following below @app.route("/success")
 
     table = Results(results)
     table.border = True
@@ -28,11 +28,13 @@ In app.py  header I added #from tables import Results I  added the following bel
 
 This generates an instance of the Results class which organizes each entry into the appropriate column. Despite this optimism I did not gain anything from this and was again greeted by “This site can’t be reached, localhost refused to connect.” For some strange reason (of which I can not yet resolve ) the flaskapp container was not generated. Back to square one…. I am suspecting that the data base is not sending its contents up the ladder …. that is either
 
-db —x—> flaskapp ——> nginx
-db ——> flaskapp —x—> nginx
-db —x—> flaskapp —x—> nginx
+db <—x—> flaskapp <——> nginx
+db <——> flaskapp <—x—> nginx
+db <—x—> flaskapp <—x—> nginx
 
-Since I expect the list to look something like 
+Where <--x--> means the channel is closed and there is lack of communication between the 2 containers.
+
+I expect the list to look something like 
 
 [  (item1.name, item1.quantity, item1.description, date_added), 
    (item2.name, item2.quantity, item2.description, date_added), 
