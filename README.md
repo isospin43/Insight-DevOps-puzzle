@@ -1,67 +1,56 @@
 # Insight DevOps Engineering Systems Puzzle
 
-## Table of Contents
-1. [Understanding the puzzle](README.md#understanding-the-puzzle)
-2. [Introduction](README.md#introduction)
-3. [Puzzle details](README.md#puzzle-details)
-4. [Instructions to submit your solution](README.md#instructions-to-submit-your-solution)
-5. [FAQ](README.md#faq)
+# Note: the mentioned bugs are numbered 
 
-# Understanding the puzzle
+# My notes and thoughts 
 
-We highly recommend that you take a few dedicated minutes to read this README in its entirety before starting to think about potential solutions. You'll probably find it useful to review the codebase and understand the system at a high-level before attempting to find specific bugs.
 
-# Introduction
+1) switched 80:8080 to 8080:80 correcting the porting of the nginx to a request
 
-Imagine you're on an engineering team that is building an eCommerce site where users can buy and sell items (similar to Etsy or eBay). One of the developers on your team has put together a very simple prototype for a system that writes and reads to a database. The developer is using Postgres for the backend database, the Python Flask framework as an application server, and nginx as a web server. All of this is developed with the Docker Engine, and put together with Docker Compose.
+A slight improvement over “This site can’t be reached, localhost refused to connect.” which led me to a “502 Bad gateway” instead. When I printed out the container list for db,nginx and the flask app; In the log list for nginx there was a “failed (111: No route to host) while connecting to upstream” which suggested to me some connection/port issue was between the the nginx container (which depends upon the flaskapp.conf file) or app.py itself. I initially tried to tweek the flaskapp.conf trying to use the “upstream option” but was not successful. At face value the flask app.conf file was aware of where to send incoming requests by the line “proxy_pass http://flaskapp:5001;”, but there has to be something which accepts such requests. After some web surfing, I noticed that no port was specified in app.py . Looking at example applications I saw where the port needed to be specified (app.run(host='0.0.0.0', port=5001, debug=True)). This corrected the second bug.
 
-Unfortunately, the developer is new to many of these tools, and is having a number of issues. The developer needs your help debugging the system and getting it to work properly.
+2) changed app.run(host='0.0.0.0') to app.run(host='0.0.0.0', port=5001, debug=True)
 
-# Puzzle details
+Now entering localhost:8080 into the browser led me to the next step —> I could now interact with the flaskapp and enter items to be saved to the database. When I press “Enter Item” I am rerouted to success page which should display the contents of the database but instead displays an empty list. A new bug has emerged…My initial thought was that the output was not coded correctly and that upon rerouting, a NEW html file needed to be specified to properly display the contents of the database. In order to implement this I attempted a simple routine I found in an online resource which seemed to give a reasonable solution. I opened a new html file in templates/results.html . This would be the new html file I mentioned a moment ago. I pip installed a library called flask_table (just added to the requirement.txt file) which would allow me to generate a nice and neat table for displaying the contents of the database with NO nice features like edit/delete etc. This new library and table class are in tables.py which just contains
+from flask_table import Table, Col
 
-The codebase included in this repo is nearly functional, but has a few bugs that are preventing it from working properly. The goal of this puzzle is to find these bugs and fix them. To do this, you'll have to familiarize yourself with the various technologies (Docker, nginx, Flask, and Postgres). You definitely don't have to be an expert on these, but you should know them well enough to understand what the problem is.
+class Results(Table):
+    type_of_item = Col('Item')
+    number_items = Col('# of items')
+    description = Col('description')
+    date_added =('Date added')
 
-Assuming you have the Docker Engine and Docker Compose already installed, the developer said that the steps for running the system is to open a terminal, `cd` into this repo, and then enter these two commands:
+In app.py  header I added #from tables import Results I  added the following below @app.route("/success")
 
-    docker-compose up -d db
-    docker-compose run --rm flaskapp /bin/bash -c "cd /opt/services/flaskapp/src && python -c  'import database; database.init_db()'"
+   # table = Results(results)
+   # table.border = True
+   # return render_template('results.html', table=table)
 
-This "bootstraps" the PostgreSQL database with the correct tables. After that you can run the whole system with:
+This generates an instance of the Results class which organizes each entry into the appropriate column. Despite this optimism I did not gain anything from this and was again greeted by “This site can’t be reached, localhost refused to connect.” For some strange reason (of which I can not yet resolve ) the flaskapp container was not generated. Back to square one…. I am suspecting that the data base is not sending its contents up the ladder …. that is either
 
-    docker-compose up -d
+db —x—> flaskapp ——> nginx
+db ——> flaskapp —x—> nginx
+db —x—> flaskapp —x—> nginx
 
-At that point, the web application should be visible by going to `localhost:8080` in a web browser. 
+Since I expect the list to look something like 
 
-Once you've corrected the bugs and have the basic features working, commit the functional codebase to a new repo following the instructions below. As you debug the system, you should keep track of your thought process and what steps you took to solve the puzzle.
+[  (item1.name, item1.quantity, item1.description, date_added), 
+   (item2.name, item2.quantity, item2.description, date_added), 
+   (item3.name, item3.quantity, item3.description, date_added),
+(………)  ] 
 
-## Instructions to submit your solution
-* Don't schedule your interview until you've worked on the puzzle 
-* To submit your entry please use the link you received in your systems puzzle invitation
-* You will only be able to submit through the link one time
-* For security, we will not open solutions submitted via files
-* Use the submission box to enter the link to your GitHub repo or Bitbucket ONLY
-* Link to the specific repo for this project, not your general profile
-* Put any comments in the README inside your project repo
+but instead get an empty list which still accounts for the proper number of items 
 
-# FAQ
+[, , , , , , , , , , , ,]
 
-Here are some common questions we've received. If you have additional questions, please email us at `devops@insightdata.com` and we'll answer your questions as quickly as we can (during PST business hours), and update this FAQ. Again, only contact us after you have read through the Readme and FAQ one more time and cannot find the answer to your question.
+The source code of the html file gives
 
-### Which Github link should I submit?
-You should submit the URL for the top-level root of your repository. For example, this repo would be submitted by copying the URL `https://github.com/InsightDataScience/systems-puzzle` into the appropriate field on the application. **Do NOT try to submit your coding puzzle using a pull request**, which would make your source code publicly available.
+[<models.Items object at 0x7fbc2c37a438>, <models.Items object at 0x7fbc2c37a4e0>, <models.Items object at 0x7fbc2c37a588>, <models.Items object at 0x7fbc2c37a630>,. . . . .]
 
-### Do I need a private Github repo?
-No, you may use a public repo, there is no need to purchase a private repo. You may also submit a link to a Bitbucket repo if you prefer.
+So lets traceback and see how the items are being entered from which file and passed along until it is finally in models.Items
 
-### What sort of system should I use to run my program (Windows, Linux, Mac)?
-You should use Docker to run and test your solution, which should work on any operating system. If you're unfamiliar with Docker, we recommend attending one of our Online Tech Talks on Docker, which you should've received information about in your invitation. Alternatively, there are ample free resources available on docker.com.
+First the code initializes a ItemForm() object which is basically the homepage of the application
 
-### How will my solution be evaluated?
-While we will review your submission briefly before your interview, the main point of this puzzle is to serve as content for discussion during the interview. In the interview, we'll evaluate your problem solving and debugging skills based off how you solved this puzzle, so be sure to document your thought process.
+Next we call the Items object which basically reads in what was entered in ItemForm(). for example id which is a class member of ‘Items’ takes the value of a string which was entered in ItemForm. This is why in the Items object we have name=form.name.data. Basically we just created an instance of the Class Items where each of the members take on a value we specified on the home page.
 
-### This eCommerce site is ugly...should I improve the design?  
-No, you should focus on the functionality. Your engineering team will bring on a designer and front-end developer later in the process, so don't worry about that aspect in this puzzle. If you have extra time, it would be far better to focus on aspects that make the code cleaner and easier to use, like tests and refactoring.
-
-### Should I use orchestration tools like Kubernetes?
-While technologies like Kubernetes are quite powerful, they're likely overkill for the simple application in this puzzle. We recommend that you stick to Docker Compose for this puzzle.
 
