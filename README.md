@@ -59,6 +59,8 @@ Next we call the Items object which basically reads in what was entered in ItemF
 
 qry = db_session.query(Items)
 
+(more details in http://docs.sqlalchemy.org/en/latest/orm/query.html)
+
 Here this accesses any occurrence in which an Items object was instantiated 
 
 While results = qry.all() collects all such instances. In order to call particular subsets of records requires more involved functionality. The resulting 
