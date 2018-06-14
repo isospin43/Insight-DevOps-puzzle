@@ -29,7 +29,9 @@ In app.py  header I added #from tables import Results. Following this I added th
 This generates an instance of the Results class which organizes each entry into the appropriate column. Despite this optimism I did not gain anything from this and was again greeted by “This site can’t be reached, localhost refused to connect.” For some strange reason (of which I can not yet resolve ) the flaskapp container was not generated. Back to square one…. I am suspecting that the data base is not sending its contents up the ladder …. that is either
 
 db <—x—> flaskapp <——> nginx
+
 db <——> flaskapp <—x—> nginx
+
 db <—x—> flaskapp <—x—> nginx
 
 Where <--x--> means the channel is closed and there is lack of communication between the 2 containers.
