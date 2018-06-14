@@ -5,11 +5,11 @@
 # My notes and thoughts 
 
 
-1) switched 80:8080 to 8080:80 correcting the porting of the nginx to a request
+(1) switched 80:8080 to 8080:80 correcting the porting of the nginx to a request
 
 A slight improvement over “This site can’t be reached, localhost refused to connect.” which led me to a “502 Bad gateway” instead. When I printed out the container list for db,nginx and the flask app; In the log list for nginx there was a “failed (111: No route to host) while connecting to upstream” which suggested to me some connection/port issue was between the the nginx container (which depends upon the flaskapp.conf file) or app.py itself. I initially tried to tweek the flaskapp.conf trying to use the “upstream option” but was not successful. At face value the flask app.conf file was aware of where to send incoming requests by the line “proxy_pass http://flaskapp:5001;”, but there has to be something which accepts such requests. After some web surfing, I noticed that no port was specified in app.py . Looking at example applications I saw where the port needed to be specified (app.run(host='0.0.0.0', port=5001, debug=True)). This corrected the second bug.
 
-2) changed app.run(host='0.0.0.0') to app.run(host='0.0.0.0', port=5001, debug=True)
+(2) changed app.run(host='0.0.0.0') to app.run(host='0.0.0.0', port=5001, debug=True)
 
 Now entering localhost:8080 into the browser led me to the next step —> I could now interact with the flaskapp and enter items to be saved to the database. When I press “Enter Item” I am rerouted to success page which should display the contents of the database but instead displays an empty list. A new bug has emerged…My initial thought was that the output was not coded correctly and that upon rerouting, a NEW html file needed to be specified to properly display the contents of the database. In order to implement this I attempted a simple routine I found in an online resource which seemed to give a reasonable solution. I opened a new html file in templates/results.html . This would be the new html file I mentioned a moment ago. I pip installed a library called flask_table (just added to the requirement.txt file) which would allow me to generate a nice and neat table for displaying the contents of the database with NO nice features like edit/delete etc. This new library and table class are in tables.py which just contains
 from flask_table import Table, Col
@@ -53,6 +53,15 @@ So lets traceback and see how the items are being entered from which file and pa
 
 First the code initializes a ItemForm() object which is basically the homepage of the application
 
-Next we call the Items object which basically reads in what was entered in ItemForm(). for example id which is a class member of ‘Items’ takes the value of a string which was entered in ItemForm. This is why in the Items object we have name=form.name.data. Basically we just created an instance of the Class Items where each of the members take on a value we specified on the home page.
+Next we call the Items object which basically reads in what was entered in ItemForm(). for example id which is a class member of ‘Items’ takes the value of a string which was entered in ItemForm. This is why in the Items object we have name=form.name.data. Basically we just created an instance of the Class Items where each of the members take on a value we specified on the home page. The bug/error in the app.py managing application in which the database query is called. Namely, the error which prevents displaying member variables of the class object is in the code snippet 
+
+qry = db_session.query(Items)
+
+Here this accesses any occurrence in which an Items object was instantiated 
+
+While results = qry.all() collects all such instances. In order to call particular subsets of records requires more involved functionality. The resulting 
+return str(results) thus returns the addresses of the each Items object but NOT the specific contents or attributes of each. To view the contents required a small correction to the the above code. This was the 3rd “bug” 
+
+(3) changed qry = db_session.query(Items) to qry = db_session.query(Items.name,Items.quantity,Items.description,Items.date_added)
 
 
