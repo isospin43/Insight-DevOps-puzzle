@@ -2,3 +2,4 @@ Flask
 psycopg2
 SQLAlchemy
 Flask-WTF
+wtforms>=3.0.0a1 # not directly required, pinned by Snyk to avoid a vulnerability
